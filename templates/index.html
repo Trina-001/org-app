@@ -1,0 +1,130 @@
+<!-- app/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Organization Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>File Organization Tool</h1>
+        </header>
+        
+        <div class="main-content">
+            <div class="input-section">
+                <label for="folder_path">Folder Path:</label>
+                <input type="text" id="folder_path" placeholder="Enter full path to folder">
+            </div>
+            
+            <div class="buttons">
+                <button id="organize-btn" onclick="startOrganize()">Organize</button>
+                <button id="transfer-btn" onclick="startTransfer()">Transfer</button>
+            </div>
+            
+            <div class="status">
+                <h2>Status</h2>
+                <div class="status-item">
+                    <strong>Organization:</strong> <span id="organize-status">Ready</span>
+                </div>
+                <div class="status-item">
+                    <strong>Transfer:</strong> <span id="transfer-status">Ready</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statusInterval;
+        
+        function startOrganize() {
+            const folderPath = document.getElementById('folder_path').value;
+            if (!folderPath) {
+                alert('Please enter a folder path');
+                return;
+            }
+            
+            fetch('/organize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `folder_path=${encodeURIComponent(folderPath)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Organization process started');
+                    startStatusCheck();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while starting organization');
+            });
+        }
+        
+        function startTransfer() {
+            const folderPath = document.getElementById('folder_path').value;
+            if (!folderPath) {
+                alert('Please enter a folder path');
+                return;
+            }
+            
+            fetch('/transfer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `folder_path=${encodeURIComponent(folderPath)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Transfer process started');
+                    startStatusCheck();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while starting transfer');
+            });
+        }
+        
+        function startStatusCheck() {
+            if (statusInterval) clearInterval(statusInterval);
+            statusInterval = setInterval(checkStatus, 2000);
+        }
+        
+        function checkStatus() {
+            fetch('/status')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('organize-status').textContent = data.organize.message;
+                document.getElementById('transfer-status').textContent = data.transfer.message;
+                
+                // Update button states
+                document.getElementById('organize-btn').disabled = data.organize.running;
+                document.getElementById('transfer-btn').disabled = data.transfer.running;
+                
+                // Stop checking if both processes are done
+                if (!data.organize.running && !data.transfer.running) {
+                    clearInterval(statusInterval);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking status:', error);
+            });
+        }
+        
+        // Initial status check
+        checkStatus();
+    </script>
+</body>
+</html>
